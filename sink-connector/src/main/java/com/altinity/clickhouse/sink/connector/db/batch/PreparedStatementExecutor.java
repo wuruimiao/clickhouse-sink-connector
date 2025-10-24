@@ -194,6 +194,7 @@ public class PreparedStatementExecutor {
             try (PreparedStatement ps = metadata.getPreparedStatement(conn, insertQuery)) {
 
                 for (ClickHouseStruct record : batch) {
+                    log.info("Doing record from partition={}, offset={}", record.getKafkaPartition(), record.getKafkaOffset());
                     if (record.getDatabase() != null)
                         databaseName = record.getDatabase();
 
@@ -408,8 +409,10 @@ public class PreparedStatementExecutor {
                             }
                         } else if (record.getSequenceNumber() != -1) {
                             ps.setLong(columnNameToIndexMap.get(versionColumn),  record.getSequenceNumber());
-                        } else {
+                        } else if (record.getLsn() != -1){
                             ps.setLong(columnNameToIndexMap.get(versionColumn),  record.getLsn());
+                        } else {
+                            ps.setLong(columnNameToIndexMap.get(versionColumn),  0);
                         }
                 }
             }
