@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +46,15 @@ public class ClickHouseAlterTable
 
         ALTER_TABLE_OPERATION(String op) {
             this.op = op;
+        }
+    }
+
+    private static final String[] INT_TYPES = {"Int8", "Int16", "Int32", "Int64"};
+    private static final Map<String, Integer> INT_ORDER;
+    static {
+        INT_ORDER = new HashMap<>();
+        for (int i = 0; i < INT_TYPES.length; ++i) {
+            INT_ORDER.put(INT_TYPES[i], i);
         }
     }
 
@@ -94,6 +104,11 @@ public class ClickHouseAlterTable
         return alterTableSyntax.toString();
     }
 
+    private String getCHTypeByField(Field field) {
+        Map<String, String> tmap = getColumnNameToCHDataTypeMapping(new Field[]{field});
+        return tmap.get(field.name());
+    }
+
     /**
      * Alters the ClickHouse table by adding columns that are missing.
      *
@@ -109,17 +124,29 @@ public class ClickHouseAlterTable
      * @param columnNameToDataTypeMap a map of current column names
      *                                to data types
      */
-    public void alterTable(List<Field> modifiedFields, String tableName,
+    public boolean alterTable(List<Field> modifiedFields, String tableName,
                            Connection connection,
                            Map<String, String> columnNameToDataTypeMap,
                            ClickHouseSinkConnectorConfig config) throws SQLException {
 
         List<Field> missingFieldsInCH = new ArrayList<>();
-        // Identify columns that are missing in ClickHouse.
+
+        Map<String, String> columnsForTypeUpdate = new HashMap<>();
+
         for (Field f : modifiedFields) {
             String colName = f.name();
+            // Identify columns that are missing in ClickHouse.
             if (!columnNameToDataTypeMap.containsKey(colName)) {
                 missingFieldsInCH.add(f);
+            } else {
+                // Identify columns that a type upgrade is needed
+                String existingType = columnNameToDataTypeMap.get(colName);
+                if (INT_ORDER.containsKey(existingType)) {
+                    String newType = getCHTypeByField(f);
+                    if (INT_ORDER.containsKey(newType) && INT_ORDER.get(newType) > INT_ORDER.get(existingType)) {
+                        columnsForTypeUpdate.put(colName, newType);
+                    }
+                }
             }
         }
 
@@ -144,8 +171,26 @@ public class ClickHouseAlterTable
                             alterTableQuery);
                 } catch (Exception e) {
                     log.error(" **** ALTER TABLE EXCEPTION ", e);
+                    throw e;
                 }
             }
         }
+
+        if (!columnsForTypeUpdate.isEmpty()) {
+            for (Map.Entry<String, String> entry : columnsForTypeUpdate.entrySet()) {
+                String alterColumnQuery = "ALTER TABLE " + tableName + " MODIFY COLUMN `" + entry.getKey() +
+                        "` " + entry.getValue();
+                log.info(" ***** ALTER TABLE COLUMN TYPE UPGRADE QUERY **** " + alterColumnQuery);
+                try {
+                    DBMetadata metadata = new DBMetadata(config);
+                    metadata.executeSystemQuery(connection, alterColumnQuery);
+                } catch (Exception e) {
+                    log.error(" **** ALTER TABLE (MODIFY COLUMN) EXCEPTION ", e);
+                    throw e;
+                }
+            }
+        }
+
+        return !missingFieldsInCH.isEmpty() || !columnsForTypeUpdate.isEmpty();
     }
 }

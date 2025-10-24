@@ -332,7 +332,7 @@ public class ClickHouseBatchRunnable implements Runnable {
                 Connection dbCon = getClickHouseConnection(DbWriter.SYSTEM_DB);
                 // Create error table if it doesn't exist
                 ErrorLogger.createErrorTable(dbCon, config);
-                
+
                 // Log the error with the first record from current batch if available
                 if (currentBatch != null && !currentBatch.isEmpty()) {
                     ClickHouseStruct firstRecord = currentBatch.get(0);
@@ -340,12 +340,12 @@ public class ClickHouseBatchRunnable implements Runnable {
                     String topicName = firstRecord.getTopic();
                     String databaseName = firstRecord.getDatabase();
                     String serverName = getServerNameFromTopic(topicName);
-                    
+
                     // Get the failure entry index
                     int failureIndex = currentBatch.indexOf(firstRecord);
-                    
-                    ErrorLogger.logError(dbCon, 
-                        String.format("Error processing batch. Task: %s, Server: %s, Database: %s, Failure Index: %d, Error: %s", 
+
+                    ErrorLogger.logError(dbCon,
+                        String.format("Error processing batch. Task: %s, Server: %s, Database: %s, Failure Index: %d, Error: %s",
                             taskId, serverName, databaseName, failureIndex, e.getMessage()),
                         sourceRecord,
                         databaseName,
@@ -353,14 +353,14 @@ public class ClickHouseBatchRunnable implements Runnable {
                         "", // No offset key field available
                         errorTableName);
                 } else {
-                    ErrorLogger.logError(dbCon, 
+                    ErrorLogger.logError(dbCon,
                         String.format("Error processing batch. Task: %s, Error: %s", taskId, e.getMessage()),
                         null,
                         "",
                         "", "",
                         errorTableName);
                 }
-                
+
                 Thread.sleep(ERROR_SLEEP_TIME_MS);
             } catch (InterruptedException ex) {
                 log.error("******* ERROR **** Thread interrupted *********",
@@ -507,6 +507,9 @@ public class ClickHouseBatchRunnable implements Runnable {
                         partitionToOffsetMap, this.config, tableName,
                         writer.getDatabaseName(), writer.getConnection(),
                         writer.getColumnNameToDataTypeMap());
+        if (result) {
+            writer.updateColumnNameToDataTypeMap();
+        }
         BlockMetaData bmd = new BlockMetaData();
         long maxBufferSize = this.config.getLong(
                 ClickHouseSinkConnectorConfigVariables.

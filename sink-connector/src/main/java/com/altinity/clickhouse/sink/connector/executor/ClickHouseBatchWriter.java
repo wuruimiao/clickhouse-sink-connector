@@ -393,6 +393,9 @@ public class ClickHouseBatchWriter {
                         partitionToOffsetMap, this.config, tableName,
                         writer.getDatabaseName(), writer.getConnection(),
                         writer.getColumnNameToDataTypeMap());
+        if (result) {
+            writer.updateColumnNameToDataTypeMap();
+        }
         BlockMetaData bmd = new BlockMetaData();
         long maxBufferSize = this.config.getLong(
                 ClickHouseSinkConnectorConfigVariables.

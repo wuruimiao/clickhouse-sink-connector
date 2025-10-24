@@ -82,14 +82,14 @@ public class GroupInsertQueryWithBatchRecords {
 
             if (CdcRecordState.CDC_RECORD_STATE_BEFORE ==
                     getCdcSectionBasedOnOperation(record.getCdcOperation())) {
-                result = updateQueryToRecordsMap(record,
+                updateQueryToRecordsMap(record,
                         record.getBeforeModifiedFields(), queryToRecordsMap,
                         tableName, config, columnNameToDataTypeMap);
             } else if (CdcRecordState.CDC_RECORD_STATE_AFTER ==
                     getCdcSectionBasedOnOperation(record.getCdcOperation())) {
                 if (enableSchemaEvolution) {
                     try {
-                        new ClickHouseAlterTable().alterTable(
+                        result = new ClickHouseAlterTable().alterTable(
                                 record.getAfterStruct().schema().fields(),
                                 tableName, connection, columnNameToDataTypeMap, config);
                         columnNameToDataTypeMap = new DBMetadata(config)
@@ -101,18 +101,30 @@ public class GroupInsertQueryWithBatchRecords {
                 }
                 // columnNameToDataTypeMap = new DBMetadata().getColumnsDataTypesForTable(
                 // tableName, connection, databaseName, config );
-                result = updateQueryToRecordsMap(record,
+                updateQueryToRecordsMap(record,
                         record.getAfterModifiedFields(), queryToRecordsMap,
                         tableName, config, columnNameToDataTypeMap);
             } else if (CdcRecordState.CDC_RECORD_STATE_BOTH ==
                     getCdcSectionBasedOnOperation(record.getCdcOperation())) {
+                if (enableSchemaEvolution) {
+                    try {
+                        result = new ClickHouseAlterTable().alterTable(
+                                record.getAfterStruct().schema().fields(),
+                                tableName, connection, columnNameToDataTypeMap, config);
+                        columnNameToDataTypeMap = new DBMetadata(config)
+                                .getColumnsDataTypesForTable(tableName,
+                                        connection, databaseName);
+                    } catch (Exception e) {
+                        log.error("**** ERROR ALTER TABLE: " + tableName, e);
+                    }
+                }
                 if (record.getBeforeModifiedFields() != null) {
-                    result = updateQueryToRecordsMap(record,
+                    updateQueryToRecordsMap(record,
                             record.getBeforeModifiedFields(), queryToRecordsMap,
                             tableName, config, columnNameToDataTypeMap);
                 }
                 if (record.getAfterModifiedFields() != null) {
-                    result = updateQueryToRecordsMap(record,
+                    updateQueryToRecordsMap(record,
                             record.getAfterModifiedFields(), queryToRecordsMap,
                             tableName, config, columnNameToDataTypeMap);
                 }
