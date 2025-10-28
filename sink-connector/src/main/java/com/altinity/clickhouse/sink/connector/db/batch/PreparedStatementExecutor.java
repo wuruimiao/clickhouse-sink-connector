@@ -235,8 +235,12 @@ public class PreparedStatementExecutor {
 
                 int[] batchResult = ps.executeBatch();
 
-                long startOffset = batch.get(0).getKafkaOffset();
-                long endOffset = batch.get(batch.size()-1).getKafkaOffset();
+                long startOffset = -1;
+                long endOffset = -1;
+                if (batch != null && !batch.isEmpty()) {
+                    startOffset = batch.get(0).getKafkaOffset();
+                    endOffset = batch.get(batch.size()-1).getKafkaOffset();
+                }
                 long taskId = config.getLong(ClickHouseSinkConnectorConfigVariables.TASK_ID.toString());
                 log.info("*************** EXECUTED BATCH Successfully " + "Records: " + batch.size() + "************** " +
                         " [Offsets: " + startOffset + " ~ " + endOffset + "] ************** " +
