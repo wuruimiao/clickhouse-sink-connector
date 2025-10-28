@@ -194,7 +194,6 @@ public class PreparedStatementExecutor {
             try (PreparedStatement ps = metadata.getPreparedStatement(conn, insertQuery)) {
 
                 for (ClickHouseStruct record : batch) {
-                    log.info("Doing record from partition={}, offset={}", record.getKafkaPartition(), record.getKafkaOffset());
                     if (record.getDatabase() != null)
                         databaseName = record.getDatabase();
 
@@ -226,13 +225,21 @@ public class PreparedStatementExecutor {
                         log.error("INVALID CDC RECORD STATE");
                     }
 
-                    ps.addBatch();
+                    try {
+                        ps.addBatch();
+                    } catch (Exception e) {
+                        log.error("Failed record offset={}", record.getKafkaOffset());
+                        throw e;
+                    }
                 }
 
                 int[] batchResult = ps.executeBatch();
 
+                long startOffset = batch.get(0).getKafkaOffset();
+                long endOffset = batch.get(batch.size()-1).getKafkaOffset();
                 long taskId = config.getLong(ClickHouseSinkConnectorConfigVariables.TASK_ID.toString());
                 log.info("*************** EXECUTED BATCH Successfully " + "Records: " + batch.size() + "************** " +
+                        " [Offsets: " + startOffset + " ~ " + endOffset + "] ************** " +
                         "task(" + taskId + ")" + " Thread ID: " +
                         Thread.currentThread().getName() + " Result: " +
                         batchResult.toString() + " Database: "
