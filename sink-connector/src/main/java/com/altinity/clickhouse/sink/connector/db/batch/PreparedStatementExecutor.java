@@ -242,11 +242,13 @@ public class PreparedStatementExecutor {
                     endOffset = batch.get(batch.size()-1).getKafkaOffset();
                 }
                 long taskId = config.getLong(ClickHouseSinkConnectorConfigVariables.TASK_ID.toString());
+                Set<Integer> deduped = new HashSet<>();
+                for (int v : batchResult) deduped.add(v);
                 log.info("*************** EXECUTED BATCH Successfully " + "Records: " + batch.size() + "************** " +
                         " [Offsets: " + startOffset + " ~ " + endOffset + "] ************** " +
                         "task(" + taskId + ")" + " Thread ID: " +
                         Thread.currentThread().getName() + " Result: " +
-                        batchResult.toString() + " Database: "
+                        deduped.toString() + " Database: "
                         + databaseName + " Table: " + tableName);
                 result.set(true);
 
