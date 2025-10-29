@@ -571,16 +571,16 @@ public class DBMetadata {
                 String formattedQuery = String.format(query, tableName, databaseName);
 
                 // Execute query
-                ResultSet rs = conn.createStatement().executeQuery(formattedQuery);
-
                 // Get the list of columns from rs.
-                if (rs != null) {
-                    while (rs.next()) {
-                        String response = rs.getString(1);
-                        aliasColumns.add(response);
+                try (Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery(formattedQuery)) {
+                    if (rs != null) {
+                        while (rs.next()) {
+                            String response = rs.getString(1);
+                            aliasColumns.add(response);
+                        }
                     }
                 }
-                rs.close();
                 break;
             } catch (Exception e) {
                 log.error("Error getting alias columns, retrying ({}/{})", retryCount,MAX_RETRIES,e);
