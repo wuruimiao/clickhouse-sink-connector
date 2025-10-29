@@ -275,7 +275,7 @@ public class ClickHouseBatchRunnable implements Runnable {
                 ///// ***** START PROCESSING BATCH **************************
                 // Step 1: Add to Inflight batches.
                 DebeziumOffsetManagement.addToBatchTimestamps(currentBatch);
-                log.info("****** Thread: " +
+                log.info("****** Task(" + taskId + ")" + " thread: " +
                         Thread.currentThread().getName() +
                         " Batch Size: " + currentBatch.size() +
                         " ******");
