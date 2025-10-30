@@ -92,9 +92,11 @@ public class GroupInsertQueryWithBatchRecords {
                         result = new ClickHouseAlterTable().alterTable(
                                 record.getAfterStruct().schema().fields(),
                                 tableName, connection, columnNameToDataTypeMap, config);
+                        if (result) {
                         columnNameToDataTypeMap = new DBMetadata(config)
                                 .getColumnsDataTypesForTable(tableName,
                                         connection, databaseName);
+                        }
                     } catch (Exception e) {
                         log.error("**** ERROR ALTER TABLE: " + tableName, e);
                     }
@@ -111,9 +113,11 @@ public class GroupInsertQueryWithBatchRecords {
                         result = new ClickHouseAlterTable().alterTable(
                                 record.getAfterStruct().schema().fields(),
                                 tableName, connection, columnNameToDataTypeMap, config);
+                        if (result) {
                         columnNameToDataTypeMap = new DBMetadata(config)
                                 .getColumnsDataTypesForTable(tableName,
                                         connection, databaseName);
+                        }
                     } catch (Exception e) {
                         log.error("**** ERROR ALTER TABLE: " + tableName, e);
                     }
